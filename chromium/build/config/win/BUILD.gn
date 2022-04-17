@@ -21,6 +21,7 @@ config("compiler") {
   ]
 
   cflags = [
+    "/utf-8", #Set Source and Executable character sets to UTF-8
     "/Gy",  # Enable function-level linking.
     "/GS",  # Enable buffer security checking.
     "/FS",  # Preserve previous PDB behavior.

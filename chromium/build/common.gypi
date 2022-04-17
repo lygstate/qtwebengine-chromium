@@ -3281,6 +3281,7 @@
         'msvs_settings':{
           'VCCLCompilerTool': {
             'AdditionalOptions': [
+              '/utf-8',
               '/bigobj',
             ],
           },
