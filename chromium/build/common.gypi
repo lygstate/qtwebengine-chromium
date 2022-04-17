@@ -1425,6 +1425,8 @@
     # to disable -Werror (e.g. for different toolchain versions).
     'disable_fatal_linker_warnings%': 0,
 
+    'system_prefix_win32%': '',
+
     'release_valgrind_build%': 0,
 
     # TODO(thakis): Make this a blacklist instead, http://crbug.com/101600
@@ -3283,6 +3285,7 @@
             'AdditionalOptions': [
               '/utf-8',
               '/bigobj',
+              '-I<(system_prefix_win32)/include',
             ],
           },
           'VCLinkerTool': {
@@ -3305,6 +3308,7 @@
               'netapi32.lib',
             ],
             'AdditionalOptions': [
+              '-LIBPATH:<(system_prefix_win32)/lib',
               # Suggested by Microsoft Devrel to avoid
               #   LINK : fatal error LNK1248: image size (80000000) exceeds maximum allowable size (80000000)
               # which started happening more regularly after VS2013 Update 4.
@@ -5859,9 +5863,7 @@
         'msvs_settings': {
           'VCLinkerTool': {
             'DelayLoadDLLs': [
-              'dbghelp.dll',
               'dwmapi.dll',
-              'shell32.dll',
               'uxtheme.dll',
             ],
           },
