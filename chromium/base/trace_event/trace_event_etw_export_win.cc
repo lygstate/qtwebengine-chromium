@@ -23,6 +23,10 @@
 // Include the event register/write/unregister macros compiled from the manifest
 // file. Note that this includes evntprov.h which requires a Vista+ Windows SDK.
 //
+
+#include <win-polyfill-export-clean.h>
+#define EventWriteTransfer wp_EventWriteTransfer
+
 // In SHARED_INTERMEDIATE_DIR.
 #include "base/trace_event/etw_manifest/chrome_events_win.h"  // NOLINT
 

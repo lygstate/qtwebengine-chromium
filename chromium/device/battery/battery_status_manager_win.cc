@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <win-polyfill-export-clean.h>
+
 #include "device/battery/battery_status_manager_win.h"
 
 #include "base/bind.h"
@@ -124,7 +126,7 @@ class BatteryStatusObserver {
     if (base::win::GetVersion() < base::win::VERSION_VISTA)
       return NULL;
 
-    return RegisterPowerSettingNotification(window_->hwnd(), power_setting,
+    return wp_RegisterPowerSettingNotification(window_->hwnd(), power_setting,
                                      DEVICE_NOTIFY_WINDOW_HANDLE);
   }
 
@@ -132,7 +134,7 @@ class BatteryStatusObserver {
     if (base::win::GetVersion() < base::win::VERSION_VISTA)
       return FALSE;
 
-    return UnregisterPowerSettingNotification(handle);
+    return wp_UnregisterPowerSettingNotification(handle);
   }
 
   bool CreateMessageWindow() {

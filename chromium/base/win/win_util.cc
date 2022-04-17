@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/win/win_util.h"
+#include <win-polyfill-export-clean.h>
 
+#include "base/win/win_util.h"
 #include <aclapi.h>
 #include <cfgmgr32.h>
 #include <lm.h>
@@ -456,7 +457,7 @@ bool DisplayVirtualKeyboard() {
         DCHECK(!common_program_files_path.empty());
       } else {
         ScopedCoMem<wchar_t> common_program_files;
-        if (FAILED(SHGetKnownFolderPath(FOLDERID_ProgramFilesCommon, 0, NULL,
+        if (FAILED(wp_SHGetKnownFolderPath(FOLDERID_ProgramFilesCommon, 0, NULL,
                                         &common_program_files))) {
           return false;
         }

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <win-polyfill-export-clean.h>
+
 #include <windows.h>
 #include <shlobj.h>
 
@@ -135,11 +137,8 @@ bool PathProviderWin(int key, FilePath* result) {
       break;
     }
     case base::DIR_APP_SHORTCUTS: {
-      if (win::GetVersion() < win::VERSION_WIN8)
-        return false;
-
       base::win::ScopedCoMem<wchar_t> path_buf;
-      if (FAILED(SHGetKnownFolderPath(FOLDERID_ApplicationShortcuts, 0, NULL,
+      if (FAILED(wp_SHGetKnownFolderPath(FOLDERID_ApplicationShortcuts, 0, NULL,
                                       &path_buf)))
         return false;
 
