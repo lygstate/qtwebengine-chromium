@@ -87,8 +87,11 @@ generator_additional_non_configuration_keys = [
     'msvs_requires_importlibrary',
     'msvs_enable_winphone',
     'msvs_application_type_revision',
+    'msvs_target_platform_version',
+    'msvs_target_platform_minversion',
 ]
 
+generator_filelist_paths = None
 
 # List of precompiled header related keys.
 precomp_keys = [
@@ -1935,6 +1938,19 @@ def PerformBuild(data, configurations, params):
     rtn = subprocess.check_call(arguments)
 
 
+def CalculateGeneratorInputInfo(params):
+  if params.get('flavor') == 'ninja':
+    toplevel = params['options'].toplevel_dir
+    qualified_out_dir = os.path.normpath(os.path.join(
+        toplevel, ninja_generator.ComputeOutputDir(params),
+        'gypfiles-msvs-ninja'))
+
+    global generator_filelist_paths
+    generator_filelist_paths = {
+        'toplevel': toplevel,
+        'qualified_out_dir': qualified_out_dir,
+    }
+
 def GenerateOutput(target_list, target_dicts, data, params):
   """Generate .sln and .vcproj files.
 
@@ -2644,6 +2660,17 @@ def _GetMSBuildGlobalProperties(spec, guid, gyp_file_name):
     else:
       properties[0].append(['ApplicationTypeRevision', '8.1'])
 
+    if spec.get('msvs_target_platform_version'):
+      target_platform_version = spec.get('msvs_target_platform_version')
+      properties[0].append(['WindowsTargetPlatformVersion',
+                            target_platform_version])
+      if spec.get('msvs_target_platform_minversion'):
+        target_platform_minversion = spec.get('msvs_target_platform_minversion')
+        properties[0].append(['WindowsTargetPlatformMinVersion',
+                              target_platform_minversion])
+      else:
+        properties[0].append(['WindowsTargetPlatformMinVersion',
+                              target_platform_version])
     if spec.get('msvs_enable_winphone'):
       properties[0].append(['ApplicationType', 'Windows Phone'])
     else:
