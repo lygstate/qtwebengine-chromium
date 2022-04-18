@@ -6,7 +6,7 @@
     'variables':
     {
         'component%': 'static_library',
-        'windows_sdk_path%': 'C:/Program Files (x86)/Windows Kits/8.1',
+        'windows_sdk_path%': 'C:/Program Files (x86)/Windows Kits/10',
         'angle_build_winrt%': '0',
         'angle_build_winphone%': '0',
         'angle_build_winrt_app_type_revision%': '8.1',
@@ -49,8 +49,8 @@
         {
             'msvs_system_include_dirs':
             [
-                '<(windows_sdk_path)/Include/shared',
-                '<(windows_sdk_path)/Include/um',
+                '<(windows_sdk_path)/Include/10.0.17763.0/shared',
+                '<(windows_sdk_path)/Include/10.0.17763.0/um',
             ],
         }],
     ],
@@ -120,14 +120,14 @@
                         {
                             'AdditionalLibraryDirectories':
                             [
-                                '<(windows_sdk_path)/Lib/winv6.3/um/x86',
+                                '<(windows_sdk_path)/Lib/10.0.17763.0/um/x86',
                             ],
                         },
                         'VCLibrarianTool':
                         {
                             'AdditionalLibraryDirectories':
                             [
-                                '<(windows_sdk_path)/Lib/winv6.3/um/x86',
+                                '<(windows_sdk_path)/Lib/10.0.17763.0/um/x86',
                             ],
                         },
                     },
@@ -141,14 +141,14 @@
                         {
                             'AdditionalLibraryDirectories':
                             [
-                                '<(windows_sdk_path)/Lib/winv6.3/um/x64',
+                                '<(windows_sdk_path)/Lib/10.0.17763.0/um/x64',
                             ],
                         },
                         'VCLibrarianTool':
                         {
                             'AdditionalLibraryDirectories':
                             [
-                                '<(windows_sdk_path)/Lib/winv6.3/um/x64',
+                                '<(windows_sdk_path)/Lib/10.0.17763.0/um/x64',
                             ],
                         },
                     },
