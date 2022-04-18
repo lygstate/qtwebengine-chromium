@@ -3280,6 +3280,7 @@
               '/utf-8',
               '/bigobj',
               '-I<(system_prefix_win32)/include',
+              '-Zc:threadSafeInit-',
             ],
           },
           'VCLinkerTool': {
