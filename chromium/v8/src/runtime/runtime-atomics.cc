@@ -103,6 +103,14 @@ inline void StoreSeqCst(uint64_t* p, uint64_t value) {
 
 #elif V8_CC_MSVC
 
+#if defined(_M_IX86)
+#define _InterlockedExchange64 _InlineInterlockedExchange64
+#define _InterlockedExchangeAdd64 _InlineInterlockedExchangeAdd64
+#define _InterlockedAnd64 _InlineInterlockedAnd64
+#define _InterlockedOr64 _InlineInterlockedOr64
+#define _InterlockedXor64 _InlineInterlockedXor64
+#endif
+
 #define _InterlockedCompareExchange32 _InterlockedCompareExchange
 #define _InterlockedExchange32 _InterlockedExchange
 #define _InterlockedExchangeAdd32 _InterlockedExchangeAdd
