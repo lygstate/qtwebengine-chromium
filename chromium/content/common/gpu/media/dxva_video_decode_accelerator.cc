@@ -88,12 +88,6 @@ const CLSID MEDIASUBTYPE_VP90 = {
   { 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 }
 };
 
-// The CLSID of the video processor media foundation transform which we use for
-// texture color conversion in DX11.
-DEFINE_GUID(CLSID_VideoProcessorMFT,
-            0x88753b26, 0x5b24, 0x49bd, 0xb2, 0xe7, 0xc, 0x44, 0x5c, 0x78,
-            0xc9, 0x82);
-
 // MF_XVP_PLAYBACK_MODE
 // Data type: UINT32 (treat as BOOL)
 // If this attribute is TRUE, the video processor will run in playback mode
