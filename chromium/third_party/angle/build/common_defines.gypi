@@ -6,7 +6,7 @@
     'variables':
     {
         'component%': 'static_library',
-        'windows_sdk_path%': 'C:/Program Files (x86)/Windows Kits/8.1',
+        'windows_sdk_path%': 'C:/Program Files (x86)/Windows Kits/10',
         # build/gyp_angle sets this to 1.
         'angle_standalone%': '0',
 
@@ -51,8 +51,8 @@
         {
             'msvs_system_include_dirs':
             [
-                '<(windows_sdk_path)/Include/shared',
-                '<(windows_sdk_path)/Include/um',
+                '<(windows_sdk_path)/Include/10.0.17763.0/shared',
+                '<(windows_sdk_path)/Include/10.0.17763.0/um',
             ],
         }],
         ['angle_standalone==1',
@@ -129,14 +129,14 @@
                         {
                             'AdditionalLibraryDirectories':
                             [
-                                '<(windows_sdk_path)/Lib/winv6.3/um/x86',
+                                '<(windows_sdk_path)/Lib/10.0.17763.0/um/x86',
                             ],
                         },
                         'VCLibrarianTool':
                         {
                             'AdditionalLibraryDirectories':
                             [
-                                '<(windows_sdk_path)/Lib/winv6.3/um/x86',
+                                '<(windows_sdk_path)/Lib/10.0.17763.0/um/x86',
                             ],
                         },
                     },
@@ -150,14 +150,14 @@
                         {
                             'AdditionalLibraryDirectories':
                             [
-                                '<(windows_sdk_path)/Lib/winv6.3/um/x64',
+                                '<(windows_sdk_path)/Lib/10.0.17763.0/um/x64',
                             ],
                         },
                         'VCLibrarianTool':
                         {
                             'AdditionalLibraryDirectories':
                             [
-                                '<(windows_sdk_path)/Lib/winv6.3/um/x64',
+                                '<(windows_sdk_path)/Lib/10.0.17763.0/um/x64',
                             ],
                         },
                     },
