@@ -139,8 +139,11 @@ class Target(object):
     self.bundle = None
     # On Windows, incremental linking requires linking against all the .objs
     # that compose a .lib (rather than the .lib itself). That list is stored
-    # here.
+    # here. In this case, we also need to save the compile_deps for the target,
+    # so that the the target that directly depends on the .objs can also depend
+    # on those.
     self.component_objs = None
+    self.compile_deps = None
     # Windows only. The import .lib is the output of a build step, but
     # because dependents only link against the lib (not both the lib and the
     # dll) we keep track of the import library here.
@@ -224,8 +227,9 @@ class NinjaWriter(object):
     self.flavor = flavor
     self.abs_build_dir = None
     if toplevel_dir is not None:
-      self.abs_build_dir = os.path.abspath(os.path.join(toplevel_dir,
-                                                        build_dir))
+      self.abs_build_dir = os.path.abspath(os.path.join(toplevel_dir, build_dir))
+      self.abs_base_dir = os.path.abspath(os.path.join(toplevel_dir, base_dir))
+
     self.obj_ext = '.obj' if flavor == 'win' else '.o'
     if flavor == 'win':
       # See docstring of msvs_emulation.GenerateEnvironmentFiles().
@@ -336,13 +340,19 @@ class NinjaWriter(object):
       obj += '.' + self.toolset
 
     path_dir, path_basename = os.path.split(path)
+    if os.path.isabs(path_dir):
+        path_dir = gyp.common.RelativePath(path_dir, self.abs_base_dir)
     #assert not os.path.isabs(path_dir), (
         #"'%s' can not be absolute path (see crbug.com/462153)." % path_dir)
 
     if qualified:
       path_basename = self.name + '.' + path_basename
-    return os.path.normpath(os.path.join(obj, self.base_dir, path_dir,
-                                         path_basename))
+
+    out_dir = os.path.normpath(os.path.join(self.base_dir, path_dir, path_basename))
+    if os.path.commonprefix([out_dir, os.path.pardir]) == os.path.pardir:
+      out_dir = out_dir.replace('..', '.')
+
+    return os.path.normpath(os.path.join(obj, out_dir))
 
   def WriteCollapsedDependencies(self, name, targets, order_only=None):
     """Given a list of targets, return a path for a single file
@@ -480,16 +490,17 @@ class NinjaWriter(object):
     elif self.flavor == 'mac' and len(self.archs) > 1:
       link_deps = collections.defaultdict(list)
 
-
+    compile_deps = self.target.actions_stamp or actions_depends
     if self.flavor == 'win' and self.target.type == 'static_library':
       self.target.component_objs = link_deps
+      self.target.compile_deps = compile_deps
 
     # Write out a link step, if needed.
     output = None
     is_empty_bundle = not link_deps and not mac_bundle_depends
     if link_deps or self.target.actions_stamp or actions_depends:
       output = self.WriteTarget(spec, config_name, config, link_deps,
-                                self.target.actions_stamp or actions_depends)
+                                compile_deps)
       if self.is_mac_bundle:
         mac_bundle_depends.append(output)
 
@@ -909,7 +920,11 @@ class NinjaWriter(object):
         obj = 'obj'
         if self.toolset != 'target':
           obj += '.' + self.toolset
-        pdbpath = os.path.normpath(os.path.join(obj, self.base_dir, self.name))
+        output_file_path = self.base_dir
+        if os.path.commonprefix([output_file_path, os.path.pardir]) == os.path.pardir:
+            output_file_path = output_file_path.replace('..', '.')
+
+        pdbpath = os.path.normpath(os.path.join(obj, output_file_path, self.name))
         pdbpath_c = pdbpath + '.c.pdb'
         pdbpath_cc = pdbpath + '.cc.pdb'
       self.WriteVariableList(ninja_file, 'pdbname_c', [pdbpath_c])
@@ -927,6 +942,11 @@ class NinjaWriter(object):
                   os.environ.get('CFLAGS', '').split() + cflags_c)
       cflags_cc = (os.environ.get('CPPFLAGS', '').split() +
                    os.environ.get('CXXFLAGS', '').split() + cflags_cc)
+    elif self.toolset == 'host':
+      cflags_c = (os.environ.get('CPPFLAGS_host', '').split() +
+                  os.environ.get('CFLAGS_host', '').split() + cflags_c)
+      cflags_cc = (os.environ.get('CPPFLAGS_host', '').split() +
+                   os.environ.get('CXXFLAGS_host', '').split() + cflags_cc)
 
     defines = config.get('defines', []) + extra_defines
     self.WriteVariableList(ninja_file, 'defines',
@@ -1055,16 +1075,16 @@ class NinjaWriter(object):
       cmd = map.get(lang)
       ninja_file.build(gch, cmd, input, variables=[(var_name, lang_flag)])
 
-  def WriteLink(self, spec, config_name, config, link_deps):
+  def WriteLink(self, spec, config_name, config, link_deps, compile_deps):
     """Write out a link step. Fills out target.binary. """
     if self.flavor != 'mac' or len(self.archs) == 1:
       return self.WriteLinkForArch(
-          self.ninja, spec, config_name, config, link_deps)
+          self.ninja, spec, config_name, config, link_deps, compile_deps)
     else:
       output = self.ComputeOutput(spec)
       inputs = [self.WriteLinkForArch(self.arch_subninjas[arch], spec,
                                       config_name, config, link_deps[arch],
-                                      arch=arch)
+                                      compile_deps, arch=arch)
                 for arch in self.archs]
       extra_bindings = []
       build_output = output
@@ -1083,7 +1103,7 @@ class NinjaWriter(object):
       return output
 
   def WriteLinkForArch(self, ninja_file, spec, config_name, config,
-                       link_deps, arch=None):
+                       link_deps, compile_deps, arch=None):
     """Write out a link step. Fills out target.binary. """
     command = {
       'executable':      'link',
@@ -1096,6 +1116,15 @@ class NinjaWriter(object):
     solibs = set()
     objects = list(link_deps)
     libs = list()
+    order_deps = set()
+
+    if compile_deps:
+      # Normally, the compiles of the target already depend on compile_deps,
+      # but a shared_library target might have no sources and only link together
+      # a few static_library deps, so the link step also needs to depend
+      # on compile_deps to make sure actions in the shared_library target
+      # get run before the link.
+      order_deps.add(compile_deps)
 
     if 'dependencies' in spec:
       # Two kinds of dependencies:
@@ -1114,6 +1143,8 @@ class NinjaWriter(object):
               target.component_objs and
               self.msvs_settings.IsUseLibraryDependencyInputs(config_name)):
             new_deps = target.component_objs
+            if target.compile_deps:
+              order_deps.add(target.compile_deps)
           elif self.flavor == 'win' and target.import_lib:
             new_deps = [target.import_lib]
           elif target.UsesToc(self.flavor):
@@ -1262,11 +1293,8 @@ class NinjaWriter(object):
       if self.flavor == 'win':
         # qmake will take care of the manifest
         ldflags = filter(lambda x: not x.lower().startswith('/manifest'), ldflags)
-        # replace the pdb file name in debug to prevent it from being overwritten by the release build
-        if self.config_name.lower().startswith('debug'):
-            if '/PDB:QtWebEngineCore.dll.pdb' in ldflags:
-                pdb_index = ldflags.index('/PDB:QtWebEngineCore.dll.pdb')
-                ldflags[pdb_index] = '/PDB:QtWebEngineCored.dll.pdb'
+        # Remove the /PDB argument. The default suits us.
+        ldflags = filter(lambda x: not x.startswith('/PDB:'), ldflags)
 
       # Replace "$!PRODUCT_DIR" with "$$PWD" in link flags (which might contain some -L directives).
       prefixed_lflags = [self.ExpandSpecial(f, '$$PWD') for f in ldflags]
@@ -1303,6 +1331,7 @@ class NinjaWriter(object):
 
     ninja_file.build(output, command + command_suffix, link_deps,
                      implicit=list(implicit_deps),
+                     order_only=list(order_deps),
                      variables=extra_bindings)
     return linked_binary
 
@@ -1317,7 +1346,7 @@ class NinjaWriter(object):
       self.target.type = 'none'
     elif spec['type'] == 'static_library':
       self.target.binary = self.ComputeOutput(spec)
-      if (self.flavor not in ('mac', 'openbsd', 'win') and not
+      if (self.flavor not in ('mac', 'openbsd', 'netbsd', 'win') and not
           self.is_standalone_static_library):
         self.ninja.build(self.target.binary, 'alink_thin', link_deps,
                          order_only=compile_deps)
@@ -1354,7 +1383,8 @@ class NinjaWriter(object):
                            # needed.
                            variables=variables)
     else:
-      self.target.binary = self.WriteLink(spec, config_name, config, link_deps)
+      self.target.binary = self.WriteLink(spec, config_name, config, link_deps,
+                                          compile_deps)
     return self.target.binary
 
   def WriteMacBundle(self, spec, mac_bundle_depends, is_empty):
@@ -1736,7 +1766,7 @@ def CommandWithWrapper(cmd, wrappers, prog):
 
 def GetDefaultConcurrentLinks():
   """Returns a best-guess for a number of concurrent links."""
-  pool_size = int(os.getenv('GYP_LINK_CONCURRENCY', 0))
+  pool_size = int(os.environ.get('GYP_LINK_CONCURRENCY', 0))
   if pool_size:
     return pool_size
 
@@ -1763,7 +1793,7 @@ def GetDefaultConcurrentLinks():
     # VS 2015 uses 20% more working set than VS 2013 and can consume all RAM
     # on a 64 GB machine.
     mem_limit = max(1, stat.ullTotalPhys / (5 * (2 ** 30)))  # total / 5GB
-    hard_cap = max(1, int(os.getenv('GYP_LINK_CONCURRENCY_MAX', 2**32)))
+    hard_cap = max(1, int(os.environ.get('GYP_LINK_CONCURRENCY_MAX', 2**32)))
     return min(mem_limit, hard_cap)
   elif sys.platform.startswith('linux'):
     if os.path.exists("/proc/meminfo"):
@@ -1887,7 +1917,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params,
     ld_host = '$cc_host'
     ldxx_host = '$cxx_host'
 
-  ar_host = 'ar'
+  ar_host = ar
   cc_host = None
   cxx_host = None
   cc_host_global_setting = None
@@ -2341,17 +2371,27 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params,
     if flavor == 'mac':
       gyp.xcode_emulation.MergeGlobalXcodeSettingsToSpec(data[build_file], spec)
 
-    build_file = gyp.common.RelativePath(build_file, options.toplevel_dir)
+    # If build_file is a symlink, we must not follow it because there's a chance
+    # it could point to a path above toplevel_dir, and we cannot correctly deal
+    # with that case at the moment.
+    build_file = gyp.common.RelativePath(build_file, options.toplevel_dir,
+                                         False)
 
     qualified_target_for_hash = gyp.common.QualifiedTarget(build_file, name,
                                                            toolset)
     hash_for_rules = hashlib.md5(qualified_target_for_hash).hexdigest()
 
     base_path = os.path.dirname(build_file)
+    output_file_path = base_path
+    if os.path.commonprefix([output_file_path, os.path.pardir]) == os.path.pardir:
+        # avoid escaping the build-dir due to generated files
+        # outside the source directory
+        output_file_path = output_file_path.replace('..', '.')
+
     obj = 'obj'
     if toolset != 'target':
       obj += '.' + toolset
-    output_file = os.path.join(obj, base_path, name + '.ninja')
+    output_file = os.path.join(obj, output_file_path, name + '.ninja')
 
     ninja_output = StringIO()
     writer = NinjaWriter(hash_for_rules, target_outputs, base_path, build_dir,
