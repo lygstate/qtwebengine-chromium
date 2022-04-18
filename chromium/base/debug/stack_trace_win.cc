@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <win-polyfill-export-clean.h>
 #include "base/debug/stack_trace.h"
 
 #include <windows.h>
@@ -161,7 +162,7 @@ class SymbolContext {
 
     // Note: The below function takes buffer size as number of characters,
     // not number of bytes!
-    if (!SymGetSearchPathW(GetCurrentProcess(),
+    if (!wp_SymGetSearchPathW(GetCurrentProcess(),
                            symbols_path.get(),
                            kSymbolsArraySize)) {
       DLOG(WARNING) << "SymGetSearchPath failed: ";
@@ -170,7 +171,7 @@ class SymbolContext {
 
     std::wstring new_path(std::wstring(symbols_path.get()) +
                           L";" + GetExePath().DirName().value());
-    if (!SymSetSearchPathW(GetCurrentProcess(), new_path.c_str())) {
+    if (!wp_SymSetSearchPathW(GetCurrentProcess(), new_path.c_str())) {
       DLOG(WARNING) << "SymSetSearchPath failed.";
       return;
     }
