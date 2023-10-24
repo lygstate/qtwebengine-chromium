@@ -48,7 +48,7 @@ const DWORD kProcessKilledExitCode = 1;
 
 }  // namespace
 
-void RouteStdioToConsole() {
+void RouteStdioToConsole(bool create_console_if_not_found) {
   // Don't change anything if stdout or stderr already point to a
   // valid stream.
   //
@@ -76,10 +76,14 @@ void RouteStdioToConsole() {
     // parent process is invalid (eg: crashed).
     if (result == ERROR_GEN_FAILURE)
       return;
-    // Make a new console if attaching to parent fails with any other error.
-    // It should be ERROR_INVALID_HANDLE at this point, which means the browser
-    // was likely not started from a console.
-    AllocConsole();
+    if (create_console_if_not_found) {
+      // Make a new console if attaching to parent fails with any other error.
+      // It should be ERROR_INVALID_HANDLE at this point, which means the browser
+      // was likely not started from a console.
+      AllocConsole();
+    } else {
+      return;
+    }
   }
 
   // Arbitrary byte count to use when buffering output lines.  More

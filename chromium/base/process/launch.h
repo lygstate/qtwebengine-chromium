@@ -236,7 +236,7 @@ BASE_EXPORT bool SetJobObjectLimitFlags(HANDLE job_object, DWORD limit_flags);
 
 // Output multi-process printf, cout, cerr, etc to the cmd.exe console that ran
 // chrome. This is not thread-safe: only call from main thread.
-BASE_EXPORT void RouteStdioToConsole();
+BASE_EXPORT void RouteStdioToConsole(bool create_console_if_not_found);
 #endif  // defined(OS_WIN)
 
 // Executes the application specified by |cl| and wait for it to exit. Stores

@@ -634,7 +634,7 @@ class ContentMainRunnerImpl : public ContentMainRunner {
 #if defined(OS_WIN)
     // Route stdio to parent console (if any) or create one.
     if (command_line.HasSwitch(switches::kEnableLogging))
-      base::RouteStdioToConsole();
+      base::RouteStdioToConsole(true);
 #endif
 
     // Enable startup tracing asap to avoid early TRACE_EVENT calls being
